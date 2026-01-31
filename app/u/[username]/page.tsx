@@ -92,10 +92,11 @@ export default async function Page({
 }: {
   params: { username: string };
 }) {
+  const { username } = await params;  // ← ADD THIS
   const supabase = await createSupabaseServer();
 
   let user = null;
-  let activeUsername = params.username;
+  let activeUsername = username;  // ← CHANGE THIS (was params.username)
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
 
@@ -109,6 +110,7 @@ export default async function Page({
 
     if (profile?.username) activeUsername = profile.username;
   }
+  // ... rest remains the same
 
   /* -------- Collections -------- */
 
