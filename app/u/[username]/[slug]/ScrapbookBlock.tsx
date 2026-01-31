@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Star, Upload, Loader2, Move, X, GripVertical } from "lucide-react";
 import { Block, BlockType } from "./types";
 
@@ -30,6 +30,15 @@ export default function ScrapbookBlock({
   handleImageUpload,
 }: ScrapbookBlockProps) {
   const [showControls, setShowControls] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea when content changes
+  useEffect(() => {
+    if (block.type === "text" && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [block.content, block.type]);
 
   return (
     <div
@@ -77,14 +86,15 @@ export default function ScrapbookBlock({
       {/* Text Block */}
       {block.type === "text" && (
         <div 
-          className="relative bg-[#FFFDF5]/80 p-4 rounded-sm border border-[#8C7B66]/30 shadow-sm"
+          className="relative p-4"
           style={{ width: block.width || 300 }}
         >
           <textarea
+            ref={textareaRef}
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             style={{ fontFamily: block.fontFamily }}
-            className="w-full bg-transparent border-none outline-none resize-none text-[#2A231A] text-base leading-relaxed overflow-hidden placeholder-[#2A231A]/30"
+            className="w-full bg-transparent border-none outline-none resize-none text-[#2A231A] text-base leading-relaxed placeholder-[#2A231A]/30"
             rows={1}
             placeholder="Start typing..."
             spellCheck={false}
