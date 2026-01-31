@@ -37,14 +37,10 @@ const PaperTexture = () => (
 
 /* ------------------ Supabase Server Helper ------------------ */
 
+/* ------------------ Supabase Server Helper ------------------ */
+
 async function createSupabaseServer() {
   const cookieStore = await cookies();
-
-  interface CookieSetOptions {
-    name: string;
-    value: string;
-    options?: Record<string, unknown>;
-  }
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,10 +48,10 @@ async function createSupabaseServer() {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet: CookieSetOptions[]) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
+        setAll: () => {
+          // Leave this empty! 
+          // Server Components cannot set cookies.
+          // Refreshing is handled by Middleware.
         },
       },
     }

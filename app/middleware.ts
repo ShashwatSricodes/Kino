@@ -1,32 +1,34 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }>) {
+        getAll: (): ReturnType<typeof request.cookies.getAll> => request.cookies.getAll(),
+        setAll: (cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }>) => {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
-  );
+  )
 
-  // 🔑 THIS LINE IS REQUIRED
-  await supabase.auth.getUser();
+  // This line triggers the session refresh logic safely in the middleware
+  await supabase.auth.getUser()
 
-  return response;
+  return response
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}
