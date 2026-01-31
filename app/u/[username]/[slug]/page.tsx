@@ -10,8 +10,6 @@ import {
   StickyNote, 
   PenTool, 
   ArrowLeft,
-  Share2, 
-  Check,
   Save,
   AlertCircle
 } from "lucide-react";
@@ -44,7 +42,6 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   
   const [showFontPreview, setShowFontPreview] = useState(false);
@@ -234,12 +231,6 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
     }
   };
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
     if ('touches' in e) {
       return { x: e.touches[0].pageX, y: e.touches[0].pageY };
@@ -269,6 +260,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
 
   const onMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (draggingId) {
+      e.preventDefault(); // Prevent scrolling while dragging
       const { x: pageX, y: pageY } = getCoordinates(e);
       const newBlocks = blocks.map((b) =>
         b.id === draggingId
@@ -277,6 +269,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
       );
       setBlocks(newBlocks);
     } else if (resizingId) {
+      e.preventDefault(); // Prevent scrolling while resizing
       const { x: pageX } = getCoordinates(e);
       const delta = pageX - resizeStart.current.x;
       const newWidth = Math.max(200, resizeStart.current.width + delta);
@@ -313,17 +306,28 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
 
   return (
     <main
-      className="min-h-screen relative bg-[#F0E6D2] touch-none pb-96 overflow-x-hidden" 
+      className="min-h-screen relative bg-[#F0E6D2] pb-[200vh] overflow-x-hidden" 
       onMouseMove={onMove}
       onTouchMove={onMove}
       onMouseUp={onEnd}
       onTouchEnd={onEnd}
+      onMouseLeave={onEnd}
+      onTouchCancel={onEnd}
     >
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@400;700&family=Abril+Fatface&display=swap');
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .doodle-ink { mix-blend-mode: multiply; stroke-linecap: round; stroke-linejoin: round; }
+        
+        html, body {
+          overflow-x: hidden;
+          overscroll-behavior: none;
+        }
+        
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
       `}</style>
 
       {/* Background */}
@@ -345,33 +349,23 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
 
       {/* Save Status */}
       <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end gap-2">
-          <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 font-[Architects_Daughter] text-xs text-[#5C5043] bg-[#FFFDF5]/90 border border-[#8C7B66]/40 px-3 py-2 rounded-full backdrop-blur-sm transition-all">
-                {saving ? (
-                   <>
-                     <Loader2 className="w-3 h-3 animate-spin" />
-                     <span>Saving...</span>
-                   </>
-                ) : saveError ? (
-                   <>
-                     <AlertCircle className="w-3 h-3 text-red-500" />
-                     <span className="text-red-600">Error</span>
-                   </>
-                ) : (
-                   <>
-                     <Save className="w-3 h-3 opacity-50" />
-                     <span>{lastSaved ? "Saved" : "Ready"}</span>
-                   </>
-                )}
-              </div>
-              
-              <button
-                onClick={copyLink}
-                className="flex items-center gap-2 font-[Architects_Daughter] text-[#3A332A] bg-[#FFFDF5]/80 border border-[#8C7B66]/40 px-3 py-2 rounded-full shadow-sm hover:bg-[#F0E6D2] transition-colors backdrop-blur-sm"
-              >
-                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
-                <span className="text-xs">{copied ? "Copied!" : "Share"}</span>
-              </button>
+          <div className="flex items-center gap-2 font-[Architects_Daughter] text-xs text-[#5C5043] bg-[#FFFDF5]/90 border border-[#8C7B66]/40 px-3 py-2 rounded-full backdrop-blur-sm transition-all">
+            {saving ? (
+               <>
+                 <Loader2 className="w-3 h-3 animate-spin" />
+                 <span>Saving...</span>
+               </>
+            ) : saveError ? (
+               <>
+                 <AlertCircle className="w-3 h-3 text-red-500" />
+                 <span className="text-red-600">Error</span>
+               </>
+            ) : (
+               <>
+                 <Save className="w-3 h-3 opacity-50" />
+                 <span>{lastSaved ? "Saved" : "Ready"}</span>
+               </>
+            )}
           </div>
           
           {saveError && (
@@ -382,9 +376,9 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[95%] max-w-2xl">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[95%] max-w-2xl touch-manipulation">
         <div className="bg-[#FFFDF5]/95 border border-[#8C7B66]/40 shadow-[2px_4px_20px_rgba(0,0,0,0.1)] rounded-2xl px-2 py-3 backdrop-blur-md">
-            <div className="flex gap-2 items-center overflow-x-auto no-scrollbar px-2 w-full justify-between md:justify-center">
+            <div className="flex gap-1 sm:gap-2 items-center overflow-x-auto no-scrollbar px-2 w-full justify-between md:justify-center">
             
             <ToolbarButton 
               icon={<Type size={20} />} 
@@ -428,7 +422,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
       />
 
       {/* Canvas */}
-      <div className="absolute top-0 left-0 w-full min-h-screen">
+      <div className="absolute top-0 left-0 w-full" style={{ minHeight: '300vh' }}>
         {blocks.map((block) => (
           <ScrapbookBlock
             key={block.id}
@@ -458,9 +452,12 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
 
 function ToolbarButton({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 min-w-[60px] text-[#5C5043] hover:text-[#2c241b] active:scale-95 transition-all">
-      <div className="p-3 bg-[#F0E6D2]/50 rounded-xl hover:bg-[#E6B89C]/30 transition-colors">{icon}</div>
-      <span className="text-[10px] font-bold font-sans uppercase tracking-widest opacity-70">{label}</span>
+    <button 
+      onClick={onClick} 
+      className="flex flex-col items-center gap-1 min-w-[56px] sm:min-w-[60px] text-[#5C5043] hover:text-[#2c241b] active:scale-95 transition-all touch-manipulation"
+    >
+      <div className="p-2.5 sm:p-3 bg-[#F0E6D2]/50 rounded-xl hover:bg-[#E6B89C]/30 transition-colors">{icon}</div>
+      <span className="text-[9px] sm:text-[10px] font-bold font-sans uppercase tracking-widest opacity-70">{label}</span>
     </button>
   );
 }
