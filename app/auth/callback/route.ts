@@ -39,12 +39,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  // 🔍 Check if username exists
+  // 🔍 Check if username exists - USE maybeSingle() instead of single()
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.id)
-    .single();
+    .maybeSingle(); // ← CHANGED: This won't throw an error if no row exists
 
   // ✅ Decide redirect
   if (profile?.username) {
