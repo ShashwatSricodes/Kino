@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, use } from "react";
-
-
 import { 
   Image as ImageIcon, 
   Type, 
@@ -123,9 +121,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
         });
       
       if (error) {
-        console.error("❌ Save error:", error);
         setSaveError(error.message);
-        
         if (error.code === '23505') {
           const { error: updateError } = await supabase
             .from("scrapbook_pages")
@@ -136,8 +132,6 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
           if (!updateError) {
             setLastSaved(new Date());
             setSaveError(null);
-          } else {
-            setSaveError(updateError.message);
           }
         }
       } else {
@@ -145,7 +139,6 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
         setSaveError(null);
       }
     } catch (err) {
-      console.error("❌ Exception during save:", err);
       setSaveError("Network error during save");
     } finally {
       setSaving(false);
@@ -161,7 +154,6 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
 
   const addBlock = (type: BlockType, content: string = "", doodlePath?: string) => {
     setHighestZ((z) => z + 1);
-    
     const scrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     const startY = scrollY + (typeof window !== 'undefined' ? window.innerHeight / 3 : 200);
     const startX = typeof window !== 'undefined' && window.innerWidth < 768 
@@ -206,27 +198,13 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
     if (!userId) return;
     try {
       setUploadingId(blockId);
-      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${crypto.randomUUID()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("scrapbook-images")
-        .upload(fileName, file);
-      
-      if (uploadError) {
-        console.error("❌ Upload error:", uploadError);
-        alert("Upload failed: " + uploadError.message);
-        return;
-      }
-      
-      const { data } = supabase.storage
-        .from("scrapbook-images")
-        .getPublicUrl(fileName);
-      
+      const { error: uploadError } = await supabase.storage.from("scrapbook-images").upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("scrapbook-images").getPublicUrl(fileName);
       updateBlock(blockId, { content: data.publicUrl });
     } catch (e) {
-      console.error("❌ Upload exception:", e);
       alert("Upload failed");
     } finally {
       setUploadingId(null);
@@ -234,7 +212,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
   };
 
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
-    if ('touches' in e) {
+    if ('touches' in e && e.touches.length > 0) {
       return { x: e.touches[0].pageX, y: e.touches[0].pageY };
     }
     return { x: (e as React.MouseEvent).pageX, y: (e as React.MouseEvent).pageY };
@@ -254,15 +232,18 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
   };
 
   const onBodyDown = (e: React.MouseEvent | React.TouchEvent, id: string, x: number, y: number, type: BlockType) => {
-    // All blocks are now draggable via their body
-    e.stopPropagation();
+    // Only stop propagation for mouse to allow touch-scrolling to bubble up
+    if (e.type === 'mousedown') {
+        e.stopPropagation();
+    }
     const { x: pageX, y: pageY } = getCoordinates(e);
     handleDragStart(id, pageX, pageY, x, y);
   };
 
   const onMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (draggingId) {
-      e.preventDefault(); // Prevent scrolling while dragging
+      // Only prevent default if we are actively dragging to allow scroll start
+      if (e.cancelable) e.preventDefault();
       const { x: pageX, y: pageY } = getCoordinates(e);
       const newBlocks = blocks.map((b) =>
         b.id === draggingId
@@ -271,14 +252,11 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
       );
       setBlocks(newBlocks);
     } else if (resizingId) {
-      e.preventDefault(); // Prevent scrolling while resizing
+      if (e.cancelable) e.preventDefault();
       const { x: pageX } = getCoordinates(e);
       const delta = pageX - resizeStart.current.x;
       const newWidth = Math.max(200, resizeStart.current.width + delta);
-      
-      const newBlocks = blocks.map((b) =>
-        b.id === resizingId ? { ...b, width: newWidth } : b
-      );
+      const newBlocks = blocks.map((b) => b.id === resizingId ? { ...b, width: newWidth } : b);
       setBlocks(newBlocks);
     }
   };
@@ -324,11 +302,17 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
         
         html, body {
           overflow-x: hidden;
-          overscroll-behavior: none;
+          overscroll-behavior-y: auto;
+          height: auto;
         }
         
         * {
           -webkit-tap-highlight-color: transparent;
+          touch-action: pan-y;
+        }
+
+        .scrapbook-block-container {
+            touch-action: none;
         }
       `}</style>
 
@@ -369,16 +353,10 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
                </>
             )}
           </div>
-          
-          {saveError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs font-[Architects_Daughter] max-w-xs">
-              {saveError}
-            </div>
-          )}
       </div>
 
       {/* Toolbar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[95%] max-w-2xl touch-manipulation">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[95%] max-w-2xl">
         <div className="bg-[#FFFDF5]/95 border border-[#8C7B66]/40 shadow-[2px_4px_20px_rgba(0,0,0,0.1)] rounded-2xl px-2 py-3 backdrop-blur-md">
             <div className="flex gap-1 sm:gap-2 items-center overflow-x-auto no-scrollbar px-2 w-full justify-between md:justify-center">
             
@@ -446,8 +424,8 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center text-[#5C5043] pointer-events-none select-none p-4 text-center">
           <h2 className="font-['Abril_Fatface'] text-4xl tracking-widest text-[#3A332A] mb-2 opacity-60">SCRAPBOOK</h2>
           <p className="font-[Architects_Daughter] text-lg opacity-50 mb-1">Add items from the toolbar below</p>
-          <p className="font-[Architects_Daughter] text-sm opacity-40">Use the drag handle (↔) on each item to move it around</p>
-          <p className="font-[Architects_Daughter] text-sm opacity-40">Scroll down for infinite space!</p>
+          <p className="font-[Architects_Daughter] text-sm opacity-40">Drag anywhere on an item to move it</p>
+          <p className="font-[Architects_Daughter] text-sm opacity-40">Scroll down for more space</p>
         </div>
       )}
     </main>
