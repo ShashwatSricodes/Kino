@@ -30,8 +30,18 @@ export default function ScrapbookBlock({
 }: ScrapbookBlockProps) {
   return (
     <div
-      onMouseDown={(e) => onBodyDown(e, block.id, block.x, block.y, block.type)}
-      onTouchStart={(e) => onBodyDown(e, block.id, block.x, block.y, block.type)}
+      onMouseDown={(e) => {
+        // Don't trigger drag if clicking on an input element
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
+        onBodyDown(e, block.id, block.x, block.y, block.type);
+      }}
+      onTouchStart={(e) => {
+        // Don't trigger drag if touching an input element
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
+        onBodyDown(e, block.id, block.x, block.y, block.type);
+      }}
       className="absolute group"
       style={{
         left: block.x,
@@ -45,7 +55,7 @@ export default function ScrapbookBlock({
       {/* Controls */}
       <div className="absolute -top-8 left-0 right-0 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto">
         <button
-          className="p-1.5 bg-[#8C7B66] text-white rounded-full shadow-md cursor-grab active:cursor-grabbing hover:bg-[#6b5d4d]"
+          className="p-1.5 bg-[#8C7B66] text-white rounded-full shadow-md cursor-grab active:cursor-grabbing hover:bg-[#6b5d4d] touch-manipulation"
           onMouseDown={(e) => onHandleDown(e, block.id, block.x, block.y)}
           onTouchStart={(e) => onHandleDown(e, block.id, block.x, block.y)}
         >
@@ -53,7 +63,7 @@ export default function ScrapbookBlock({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }}
-          className="p-1.5 bg-[#E07A5F] text-white rounded-full shadow-md hover:bg-[#c46b53]"
+          className="p-1.5 bg-[#E07A5F] text-white rounded-full shadow-md hover:bg-[#c46b53] touch-manipulation"
         >
           <X size={12} />
         </button>
@@ -81,7 +91,7 @@ export default function ScrapbookBlock({
           />
           {/* Resize Handle */}
           <div
-            className="absolute -right-1 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            className="absolute -right-1 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center touch-manipulation"
             onMouseDown={(e) => onResizeStart(e, block.id, block.width || 300)}
             onTouchStart={(e) => onResizeStart(e, block.id, block.width || 300)}
           >
@@ -129,11 +139,13 @@ export default function ScrapbookBlock({
                 return (
                   <button 
                     key={star}
-                    onMouseDown={(e) => e.stopPropagation()} 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     onClick={() => {
                       const newData = { ...data, rating: star };
                       updateBlock(block.id, { content: JSON.stringify(newData) });
                     }}
+                    className="touch-manipulation"
                   >
                     <Star size={20} className={`${star <= data.rating ? "fill-[#D4A373] text-[#D4A373]" : "text-[#D6D0C4]"}`} />
                   </button>
@@ -164,14 +176,20 @@ export default function ScrapbookBlock({
               <div className="absolute inset-0 bg-gradient-to-tr from-[#8C7B66]/20 to-transparent mix-blend-overlay"></div>
             </div>
           ) : (
-            <label className="w-48 h-48 flex flex-col items-center justify-center border-2 border-dashed border-[#E6B89C] cursor-pointer bg-[#FFFDF5] hover:bg-[#FDF6E3] transition-colors">
+            <label className="w-48 h-48 flex flex-col items-center justify-center border-2 border-dashed border-[#E6B89C] cursor-pointer bg-[#FFFDF5] hover:bg-[#FDF6E3] transition-colors touch-manipulation">
               {uploadingId === block.id ? (
                 <Loader2 className="w-8 h-8 animate-spin text-[#D4A373]" />
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-[#D4A373] mb-2" />
                   <span className="text-xs text-[#8C7B66] font-[Architects_Daughter]">Tap to Upload</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], block.id)} />
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], block.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </>
               )}
             </label>

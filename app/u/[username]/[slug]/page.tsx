@@ -252,7 +252,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
   };
 
   const onBodyDown = (e: React.MouseEvent | React.TouchEvent, id: string, x: number, y: number, type: BlockType) => {
-    if (type === 'text' || type === 'header' || type === 'review' || type === 'sticky') return; 
+    // All blocks are now draggable via their body
     e.stopPropagation();
     const { x: pageX, y: pageY } = getCoordinates(e);
     handleDragStart(id, pageX, pageY, x, y);
@@ -306,7 +306,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
 
   return (
     <main
-      className="min-h-screen relative bg-[#F0E6D2] pb-[200vh] overflow-x-hidden" 
+      className="min-h-screen relative bg-[#F0E6D2] pb-[1000vh] overflow-x-hidden" 
       onMouseMove={onMove}
       onTouchMove={onMove}
       onMouseUp={onEnd}
@@ -422,7 +422,7 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
       />
 
       {/* Canvas */}
-      <div className="absolute top-0 left-0 w-full" style={{ minHeight: '300vh' }}>
+      <div className="absolute top-0 left-0 w-full" style={{ minHeight: '1000vh' }}>
         {blocks.map((block) => (
           <ScrapbookBlock
             key={block.id}
