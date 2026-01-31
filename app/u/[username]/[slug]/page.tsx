@@ -443,7 +443,9 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
       {blocks.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-[#5C5043] pointer-events-none select-none p-4 text-center">
           <h2 className="font-['Abril_Fatface'] text-4xl tracking-widest text-[#3A332A] mb-2 opacity-60">SCRAPBOOK</h2>
-          <p className="font-[Architects_Daughter] text-lg opacity-50">Drag items from the bottom to create your page</p>
+          <p className="font-[Architects_Daughter] text-lg opacity-50 mb-1">Add items from the toolbar below</p>
+          <p className="font-[Architects_Daughter] text-sm opacity-40">Use the drag handle (↔) on each item to move it around</p>
+          <p className="font-[Architects_Daughter] text-sm opacity-40">Scroll down for infinite space!</p>
         </div>
       )}
     </main>

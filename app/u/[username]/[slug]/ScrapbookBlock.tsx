@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Star, Upload, Loader2, Move, X, GripVertical } from "lucide-react";
 import { Block, BlockType } from "./types";
 
@@ -28,20 +29,10 @@ export default function ScrapbookBlock({
   deleteBlock,
   handleImageUpload,
 }: ScrapbookBlockProps) {
+  const [showControls, setShowControls] = useState(false);
+
   return (
     <div
-      onMouseDown={(e) => {
-        // Don't trigger drag if clicking on an input element
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
-        onBodyDown(e, block.id, block.x, block.y, block.type);
-      }}
-      onTouchStart={(e) => {
-        // Don't trigger drag if touching an input element
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
-        onBodyDown(e, block.id, block.x, block.y, block.type);
-      }}
       className="absolute group"
       style={{
         left: block.x,
@@ -51,21 +42,35 @@ export default function ScrapbookBlock({
         cursor: draggingId === block.id ? "grabbing" : "default",
         transition: draggingId === block.id || resizingId === block.id ? "none" : "transform 0.1s linear",
       }}
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
+      onTouchStart={() => setShowControls(true)}
+      onTouchEnd={() => setTimeout(() => setShowControls(false), 3000)} // Hide after 3 seconds on mobile
     >
-      {/* Controls */}
-      <div className="absolute -top-8 left-0 right-0 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto">
+      {/* Controls - Show on hover/touch */}
+      <div 
+        className={`absolute -top-10 left-0 right-0 flex justify-center gap-2 transition-opacity z-50 pointer-events-auto ${
+          showControls ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
         <button
-          className="p-1.5 bg-[#8C7B66] text-white rounded-full shadow-md cursor-grab active:cursor-grabbing hover:bg-[#6b5d4d] touch-manipulation"
-          onMouseDown={(e) => onHandleDown(e, block.id, block.x, block.y)}
-          onTouchStart={(e) => onHandleDown(e, block.id, block.x, block.y)}
+          className="p-2 bg-[#8C7B66] text-white rounded-full shadow-lg cursor-grab active:cursor-grabbing hover:bg-[#6b5d4d] touch-manipulation"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onHandleDown(e, block.id, block.x, block.y);
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            onHandleDown(e, block.id, block.x, block.y);
+          }}
         >
-          <Move size={12} />
+          <Move size={14} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }}
-          className="p-1.5 bg-[#E07A5F] text-white rounded-full shadow-md hover:bg-[#c46b53] touch-manipulation"
+          className="p-2 bg-[#E07A5F] text-white rounded-full shadow-lg hover:bg-[#c46b53] touch-manipulation"
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
 
@@ -169,14 +174,26 @@ export default function ScrapbookBlock({
 
       {/* Image Block */}
       {block.type === "image" && (
-        <div className="bg-white p-3 pb-10 shadow-[2px_4px_15px_rgba(0,0,0,0.15)] transition-shadow">
+        <div 
+          className="bg-white p-3 pb-10 shadow-[2px_4px_15px_rgba(0,0,0,0.15)] transition-shadow cursor-move"
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'LABEL') {
+              onBodyDown(e, block.id, block.x, block.y, block.type);
+            }
+          }}
+          onTouchStart={(e) => {
+            if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'LABEL') {
+              onBodyDown(e, block.id, block.x, block.y, block.type);
+            }
+          }}
+        >
           {block.content ? (
             <div className="relative pointer-events-none">
               <img src={block.content} className="w-48 md:w-64 h-auto object-cover grayscale-[0.1] sepia-[0.2]" alt="memory" draggable={false} />
               <div className="absolute inset-0 bg-gradient-to-tr from-[#8C7B66]/20 to-transparent mix-blend-overlay"></div>
             </div>
           ) : (
-            <label className="w-48 h-48 flex flex-col items-center justify-center border-2 border-dashed border-[#E6B89C] cursor-pointer bg-[#FFFDF5] hover:bg-[#FDF6E3] transition-colors touch-manipulation">
+            <label className="w-48 h-48 flex flex-col items-center justify-center border-2 border-dashed border-[#E6B89C] cursor-pointer bg-[#FFFDF5] hover:bg-[#FDF6E3] transition-colors touch-manipulation pointer-events-auto">
               {uploadingId === block.id ? (
                 <Loader2 className="w-8 h-8 animate-spin text-[#D4A373]" />
               ) : (
@@ -199,8 +216,12 @@ export default function ScrapbookBlock({
 
       {/* Doodle Block */}
       {block.type === "doodle" && block.doodlePath && (
-        <div className="pointer-events-none">
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#5C5043" strokeWidth="1.2" className="doodle-ink drop-shadow-sm">
+        <div 
+          className="cursor-move"
+          onMouseDown={(e) => onBodyDown(e, block.id, block.x, block.y, block.type)}
+          onTouchStart={(e) => onBodyDown(e, block.id, block.x, block.y, block.type)}
+        >
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#5C5043" strokeWidth="1.2" className="doodle-ink drop-shadow-sm pointer-events-none">
             <path d={block.doodlePath} />
           </svg>
         </div>
