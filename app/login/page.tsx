@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
 
@@ -13,14 +12,14 @@ const supabase = createBrowserClient(
 );
 
 export default function LoginPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Email + Password login
+  // ===============================
+  // Email + Password Login (FIXED)
+  // ===============================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -37,12 +36,14 @@ export default function LoginPage() {
       return;
     }
 
-    // Redirect to home or user profile
-    router.refresh();
-    router.push("/"); 
+    // ✅ Force server-side auth handling
+    // (prevents first-login cookie race condition)
+    window.location.href = "/auth/callback";
   };
 
-  // Google OAuth login
+  // ===============================
+  // Google OAuth Login (CORRECT)
+  // ===============================
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -65,9 +66,9 @@ export default function LoginPage() {
       {/* Main Card */}
       <div className="relative w-full max-w-md bg-[#FFFDF5] shadow-[2px_4px_20px_rgba(0,0,0,0.1)] border border-[#8C7B66]/30 p-8 md:p-12">
         {/* Tape Effect */}
-        <div 
-          className="absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-8 bg-[#E6B89C]/80 shadow-sm mix-blend-multiply mask-tape" 
-          style={{ clipPath: "polygon(2% 0, 100% 0, 98% 100%, 0% 100%)" }} 
+        <div
+          className="absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-8 bg-[#E6B89C]/80 shadow-sm mix-blend-multiply mask-tape"
+          style={{ clipPath: "polygon(2% 0, 100% 0, 98% 100%, 0% 100%)" }}
         />
 
         {/* Header */}
@@ -96,7 +97,7 @@ export default function LoginPage() {
               fill="#34A853"
             />
             <path
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26..81-.58z"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26z"
               fill="#FBBC05"
             />
             <path
@@ -112,37 +113,43 @@ export default function LoginPage() {
             <span className="w-full border-t border-[#8C7B66]/20" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-[#FFFDF5] px-2 text-[#A89F91]">Or via email</span>
+            <span className="bg-[#FFFDF5] px-2 text-[#A89F91]">
+              Or via email
+            </span>
           </div>
         </div>
 
         {/* Email Login Form */}
         <form onSubmit={handleLogin} className="space-y-6 relative z-10">
           <div className="space-y-1">
-            <label className="text-xs font-bold font-serif uppercase tracking-widest text-[#5C5043]">Email</label>
+            <label className="text-xs font-bold font-serif uppercase tracking-widest text-[#5C5043]">
+              Email
+            </label>
             <div className="relative group">
-              <Mail className="absolute left-0 top-2.5 w-4 h-4 text-[#A89F91] group-focus-within:text-[#3A332A] transition-colors" />
-              <input 
-                type="email" 
-                required 
+              <Mail className="absolute left-0 top-2.5 w-4 h-4 text-[#A89F91]" />
+              <input
+                type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-transparent border-b border-[#8C7B66]/40 py-2 pl-7 font-[Architects_Daughter] text-[#3A332A] focus:outline-none focus:border-[#3A332A] transition-colors placeholder-[#A89F91]/50"
+                className="w-full bg-transparent border-b border-[#8C7B66]/40 py-2 pl-7 font-[Architects_Daughter] text-[#3A332A] focus:outline-none"
                 placeholder="you@example.com"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold font-serif uppercase tracking-widest text-[#5C5043]">Password</label>
+            <label className="text-xs font-bold font-serif uppercase tracking-widest text-[#5C5043]">
+              Password
+            </label>
             <div className="relative group">
-              <Lock className="absolute left-0 top-2.5 w-4 h-4 text-[#A89F91] group-focus-within:text-[#3A332A] transition-colors" />
-              <input 
-                type="password" 
-                required 
+              <Lock className="absolute left-0 top-2.5 w-4 h-4 text-[#A89F91]" />
+              <input
+                type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-transparent border-b border-[#8C7B66]/40 py-2 pl-7 font-[Architects_Daughter] text-[#3A332A] focus:outline-none focus:border-[#3A332A] transition-colors placeholder-[#A89F91]/50"
+                className="w-full bg-transparent border-b border-[#8C7B66]/40 py-2 pl-7 font-[Architects_Daughter] text-[#3A332A] focus:outline-none"
                 placeholder="••••••••"
               />
             </div>
@@ -157,12 +164,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 group relative inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3A332A] text-[#FFFDF5] font-serif uppercase tracking-widest text-xs hover:bg-[#2c241b] transition-all shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-[#3A332A] text-[#FFFDF5] font-serif uppercase tracking-widest text-xs disabled:opacity-70"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
               <>
                 <span>Enter Archive</span>
-                <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-3 h-3" />
               </>
             )}
           </button>
@@ -171,8 +180,11 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="mt-8 text-center border-t border-dashed border-[#8C7B66]/30 pt-6">
           <p className="font-[Architects_Daughter] text-sm text-[#5C5043]">
-            Don't have an account?{" "}
-            <Link href="/signup" className="text-[#E07A5F] underline decoration-wavy hover:text-[#c46b53]">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="text-[#E07A5F] underline decoration-wavy"
+            >
               Join here
             </Link>
           </p>
