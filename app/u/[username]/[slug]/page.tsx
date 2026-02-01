@@ -65,31 +65,43 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      if (authError) {
-        console.error("❌ Auth error:", authError);
+      // Check if user is logged in (optional, for edit mode)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // First, get the user_id from the username
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .single();
+      
+      if (profileError || !profileData) {
+        console.error("❌ Profile not found:", profileError);
+        setLoading(false);
         return;
       }
       
-      if (user) {
+      // Check if logged-in user is the owner
+      if (user && user.id === profileData.id) {
         setUserId(user.id);
-        
-        const { data, error } = await supabase
-          .from("scrapbook_pages")
-          .select("blocks")
-          .eq("user_id", user.id)
-          .eq("collection_slug", collectionSlug)
-          .maybeSingle();
+      }
+      
+      // Load page data using the user_id from profile
+      const { data, error } = await supabase
+        .from("scrapbook_pages")
+        .select("blocks")
+        .eq("user_id", profileData.id)
+        .eq("collection_slug", collectionSlug)
+        .maybeSingle();
 
-        if (error) {
-          console.error("❌ Error loading data:", error);
-          setSaveError(`Load error: ${error.message}`);
-        } else if (data?.blocks) {
-          setBlocks(data.blocks);
-          const maxZ = data.blocks.reduce((max: number, b: Block) => Math.max(max, b.zIndex), 0);
-          setHighestZ(maxZ);
-        }
+      if (error) {
+        console.error("❌ Error loading data:", error);
+        setSaveError(`Load error: ${error.message}`);
+      } else if (data?.blocks) {
+        setBlocks(data.blocks);
+        const maxZ = data.blocks.reduce((max: number, b: Block) => Math.max(max, b.zIndex), 0);
+        setHighestZ(maxZ);
       }
     } catch (error) {
       console.error("❌ Exception during load:", error);
@@ -333,55 +345,59 @@ export default function CozyScrapbook({ params }: CozyScrapbookProps) {
         <span className="hidden md:inline text-sm">Back</span>
       </button>
 
-      {/* Save Status */}
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2 font-[Architects_Daughter] text-xs text-[#5C5043] bg-[#FFFDF5]/90 border border-[#8C7B66]/40 px-3 py-2 rounded-full backdrop-blur-sm transition-all">
-            {saving ? (
-               <>
-                 <Loader2 className="w-3 h-3 animate-spin" />
-                 <span>Saving...</span>
-               </>
-            ) : saveError ? (
-               <>
-                 <AlertCircle className="w-3 h-3 text-red-500" />
-                 <span className="text-red-600">Error</span>
-               </>
-            ) : (
-               <>
-                 <Save className="w-3 h-3 opacity-50" />
-                 <span>{lastSaved ? "Saved" : "Ready"}</span>
-               </>
-            )}
-          </div>
-      </div>
+      {/* Save Status - only show for owner */}
+      {userId && (
+        <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2 font-[Architects_Daughter] text-xs text-[#5C5043] bg-[#FFFDF5]/90 border border-[#8C7B66]/40 px-3 py-2 rounded-full backdrop-blur-sm transition-all">
+              {saving ? (
+                 <>
+                   <Loader2 className="w-3 h-3 animate-spin" />
+                   <span>Saving...</span>
+                 </>
+              ) : saveError ? (
+                 <>
+                   <AlertCircle className="w-3 h-3 text-red-500" />
+                   <span className="text-red-600">Error</span>
+                 </>
+              ) : (
+                 <>
+                   <Save className="w-3 h-3 opacity-50" />
+                   <span>{lastSaved ? "Saved" : "Ready"}</span>
+                 </>
+              )}
+            </div>
+        </div>
+      )}
 
-      {/* Toolbar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[95%] max-w-2xl">
-        <div className="bg-[#FFFDF5]/95 border border-[#8C7B66]/40 shadow-[2px_4px_20px_rgba(0,0,0,0.1)] rounded-2xl px-2 py-3 backdrop-blur-md">
-            <div className="flex gap-1 sm:gap-2 items-center overflow-x-auto no-scrollbar px-2 w-full justify-between md:justify-center">
-            
-            <ToolbarButton 
-              icon={<Type size={20} />} 
-              label="Text" 
-              onClick={() => setShowFontPreview(true)} 
-            />
-            <ToolbarButton icon={<AlignLeft size={20} />} label="Header" onClick={() => addBlock("header", "Title Here")} />
-            <div className="w-px h-8 bg-[#8C7B66]/20 flex-shrink-0" />
-            
-            <ToolbarButton icon={<ImageIcon size={20} />} label="Photo" onClick={() => addBlock("image", "", "polaroid")} />
-            <ToolbarButton icon={<Star size={20} />} label="Review" onClick={() => addBlock("review", JSON.stringify({ rating: 0, text: "" }))} />
-            <ToolbarButton icon={<StickyNote size={20} />} label="Sticky" onClick={() => addBlock("sticky", "A note...")} />
-            
-            <div className="w-px h-8 bg-[#8C7B66]/20 flex-shrink-0" />
+      {/* Toolbar - only show for owner */}
+      {userId && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] w-[95%] max-w-2xl">
+          <div className="bg-[#FFFDF5]/95 border border-[#8C7B66]/40 shadow-[2px_4px_20px_rgba(0,0,0,0.1)] rounded-2xl px-2 py-3 backdrop-blur-md">
+              <div className="flex gap-1 sm:gap-2 items-center overflow-x-auto no-scrollbar px-2 w-full justify-between md:justify-center">
+              
+              <ToolbarButton 
+                icon={<Type size={20} />} 
+                label="Text" 
+                onClick={() => setShowFontPreview(true)} 
+              />
+              <ToolbarButton icon={<AlignLeft size={20} />} label="Header" onClick={() => addBlock("header", "Title Here")} />
+              <div className="w-px h-8 bg-[#8C7B66]/20 flex-shrink-0" />
+              
+              <ToolbarButton icon={<ImageIcon size={20} />} label="Photo" onClick={() => addBlock("image", "", "polaroid")} />
+              <ToolbarButton icon={<Star size={20} />} label="Review" onClick={() => addBlock("review", JSON.stringify({ rating: 0, text: "" }))} />
+              <ToolbarButton icon={<StickyNote size={20} />} label="Sticky" onClick={() => addBlock("sticky", "A note...")} />
+              
+              <div className="w-px h-8 bg-[#8C7B66]/20 flex-shrink-0" />
 
-            <ToolbarButton 
-              icon={<PenTool size={20} />} 
-              label="Doodle" 
-              onClick={() => setShowDoodlePreview(true)} 
-            />
+              <ToolbarButton 
+                icon={<PenTool size={20} />} 
+                label="Doodle" 
+                onClick={() => setShowDoodlePreview(true)} 
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Preview Modals */}
       <PreviewModals
