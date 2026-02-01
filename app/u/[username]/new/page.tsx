@@ -70,8 +70,8 @@ export default function NewPosterPage() {
         return;
       }
 
-      // Success - redirect to homepage instead of the detail page
-      router.push(`/u/${username}`);
+      // Success - redirect to the collection detail page (the board)
+      router.push(`/u/${username}/${slug}`);
       router.refresh(); // Force refresh to show new collection
     } catch (err) {
       console.error("Unexpected error:", err);

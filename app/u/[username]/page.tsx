@@ -37,8 +37,6 @@ const PaperTexture = () => (
 
 /* ------------------ Supabase Server Helper ------------------ */
 
-/* ------------------ Supabase Server Helper ------------------ */
-
 async function createSupabaseServer() {
   const cookieStore = await cookies();
 
@@ -92,11 +90,11 @@ export default async function Page({
 }: {
   params: { username: string };
 }) {
-  const { username } = await params;  // ← ADD THIS
+  const { username } = await params;
   const supabase = await createSupabaseServer();
 
   let user = null;
-  let activeUsername = username;  // ← CHANGE THIS (was params.username)
+  let activeUsername = username;
 
   const { data: { user: authUser } } = await supabase.auth.getUser();
 
@@ -110,7 +108,6 @@ export default async function Page({
 
     if (profile?.username) activeUsername = profile.username;
   }
-  // ... rest remains the same
 
   /* -------- Collections -------- */
 
@@ -162,7 +159,6 @@ export default async function Page({
               Login
             </Link>
             <span className="opacity-50">·</span>
-            {/* Explicit Signup Link */}
             <Link 
               href="/signup" 
               className="font-bold hover:text-[#E07A5F] transition-colors underline decoration-1 underline-offset-4 decoration-[#E07A5F]/40"
@@ -198,7 +194,6 @@ export default async function Page({
       <section className="relative mx-auto max-w-6xl flex flex-wrap justify-center items-end gap-x-12 gap-y-16 px-4 z-10">
         
         {/* COLLECT BUTTON */}
-        {/* If logged in -> New Collection. If NOT logged in -> Signup Page */}
         <Link href={user ? `/u/${activeUsername}/new` : "/signup"}>
           <div className="w-36 aspect-[3/4] border-2 border-dashed border-[#A89F91] flex flex-col items-center justify-center rotate-[-2deg] hover:rotate-0 transition-transform bg-[#A89F91]/5 hover:bg-[#A89F91]/10 cursor-pointer group">
             <Plus className="w-8 h-8 text-[#A89F91] group-hover:scale-110 transition-transform" />
@@ -236,8 +231,16 @@ export default async function Page({
               </div>
             </Link>
 
+            {/* Collection Title - always visible */}
+            <div className="mt-3 text-center">
+              <p className="font-[Architects_Daughter] text-sm text-[#3A332A]">
+                {c.title}
+              </p>
+            </div>
+
+            {/* Delete Button - always visible on mobile, hover on desktop */}
             {user && (
-              <div className="absolute -top-2 -right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute -top-2 -right-2 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <DeleteButton
                   collectionId={c.id}
                   collectionTitle={c.title}
