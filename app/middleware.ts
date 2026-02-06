@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
-  // ❌ DO NOT run middleware on auth callback
+ 
   if (request.nextUrl.pathname.startsWith("/auth/callback")) {
     return response;
   }
