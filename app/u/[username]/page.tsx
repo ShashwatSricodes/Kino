@@ -28,7 +28,8 @@ export default async function UserDashboardPage({
 }: {
   params: { username: string };
 }) {
-  const { username } = params;
+ const { username } = await params;
+
   const supabase = await createClient();
 
   // Get authenticated user (if any)
