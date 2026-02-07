@@ -1,15 +1,20 @@
+/**
+ * Login Page
+ * 
+ * Allows users to sign in with:
+ * - Email + Password
+ * - Google OAuth
+ * 
+ * After successful login, redirects to /auth/callback
+ * which handles the session and redirects to dashboard or onboarding
+ */
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
-
-// 🔐 Supabase client
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -17,9 +22,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ===============================
-  // Email + Password Login (FIXED)
-  // ===============================
+  const supabase = createClient();
+
+  // Email + Password Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -36,14 +41,11 @@ export default function LoginPage() {
       return;
     }
 
-    // ✅ Force server-side auth handling
-    // (prevents first-login cookie race condition)
+    // Force server-side auth handling
     window.location.href = "/auth/callback";
   };
 
-  // ===============================
-  // Google OAuth Login (CORRECT)
-  // ===============================
+  // Google OAuth Login
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",

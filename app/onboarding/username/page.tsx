@@ -1,67 +1,77 @@
+/**
+ * Username Onboarding Page
+ * 
+ * Allows new users to choose a unique username after signup.
+ * 
+ * Flow:
+ * 1. Checks if user is authenticated (redirects to /signup if not)
+ * 2. Checks if user already has username (redirects to dashboard if yes)
+ * 3. Allows user to create username
+ * 4. Saves to profiles table and redirects to /u/[username]
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import { Loader2, Fingerprint } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function UsernameOnboardingPage() {
   const router = useRouter();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Auth Check
+  // Check auth status on mount
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         router.push("/signup");
-      } else {
-        // FIX: Use .maybeSingle() instead of .single()
-        // This prevents the "406 Not Acceptable" error if the profile doesn't exist yet
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (data?.username) {
-            router.push(`/u/${data.username}`);
-        }
+        return;
       }
+
+      // Check if user already has username
+      const { data } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (data?.username) {
+        router.push(`/u/${data.username}`);
+      }
+      
       setAuthChecking(false);
     };
     checkUser();
-  }, []);
+  }, [router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username) return;
+    
     setLoading(true);
     setError(null);
 
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-        setError("User not authenticated");
-        setLoading(false);
-        return;
+      setError("User not authenticated");
+      setLoading(false);
+      return;
     }
 
-    // FIX: Removed 'updated_at' because the column doesn't exist in your DB
     const { error: insertError } = await supabase
       .from("profiles")
       .upsert({ 
         id: user.id, 
         username: username.toLowerCase()
-        // updated_at: new Date().toISOString()  <-- REMOVED THIS LINE
       });
 
     if (insertError) {
@@ -69,7 +79,7 @@ export default function UsernameOnboardingPage() {
       if (insertError.code === "23505") {
         setError("That handle is already taken.");
       } else {
-         setError(insertError.message || "Could not create ID. Try again.");
+        setError(insertError.message || "Could not create ID. Try again.");
       }
       setLoading(false);
     } else {
@@ -78,11 +88,13 @@ export default function UsernameOnboardingPage() {
     }
   };
 
-  if (authChecking) return (
-    <div className="min-h-screen bg-[#F0E6D2] flex items-center justify-center">
-       <Loader2 className="animate-spin text-[#3A332A]" />
-    </div>
-  );
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#F0E6D2] flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#3A332A]" />
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#F0E6D2] px-6 flex items-center justify-center">
@@ -106,7 +118,7 @@ export default function UsernameOnboardingPage() {
         <div className="p-8 md:p-12 relative">
           {/* Watermark */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
-             <Fingerprint size={200} />
+            <Fingerprint size={200} />
           </div>
 
           <div className="text-center mb-8">
@@ -134,7 +146,7 @@ export default function UsernameOnboardingPage() {
             </div>
 
             {error && (
-              <div className="mt-4 text-center font-[Architects_Daughter] text-[#E07A5F] text-sm animate-shake">
+              <div className="mt-4 text-center font-[Architects_Daughter] text-[#E07A5F] text-sm">
                 ⚠ {error}
               </div>
             )}
@@ -151,9 +163,9 @@ export default function UsernameOnboardingPage() {
 
         {/* Bottom Bar */}
         <div className="h-2 w-full bg-[#8C7B66]/20 border-t border-[#8C7B66]/30 flex">
-           {[...Array(20)].map((_, i) => (
-             <div key={i} className="flex-1 border-r border-[#8C7B66]/30 h-full" />
-           ))}
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="flex-1 border-r border-[#8C7B66]/30 h-full" />
+          ))}
         </div>
       </div>
     </main>

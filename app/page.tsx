@@ -1,8 +1,20 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+/**
+ * Landing Page (/)
+ * 
+ * The homepage for non-logged-in visitors.
+ * 
+ * Features:
+ * - Shows "Collect" button that links to signup
+ * - Login/Signup links in header
+ * - Auto-redirects logged-in users to their dashboard
+ * 
+ * Design matches the user dashboard for consistency.
+ */
+
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
 /* ------------------ Visual Components ------------------ */
 
@@ -16,18 +28,7 @@ const PaperTexture = () => (
 );
 
 export default async function LandingPage() {
-  const cookieStore = await cookies();
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {},
-      },
-    }
-  );
+  const supabase = await createClient();
 
   // Check if user is logged in
   const { data: { user } } = await supabase.auth.getUser();
@@ -44,8 +45,6 @@ export default async function LandingPage() {
       redirect(`/u/${profile.username}`);
     }
   }
-
-  /* ------------------ UI - Exact match to /u/[username] ------------------ */
 
   return (
     <main className="min-h-screen px-6 py-20 bg-[#EFE5CF] relative overflow-hidden">

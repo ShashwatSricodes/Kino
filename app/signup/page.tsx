@@ -1,20 +1,28 @@
+/**
+ * Signup Page
+ * 
+ * Allows new users to create an account with:
+ * - Email + Password
+ * - Google OAuth
+ * 
+ * After successful signup, redirects to /onboarding/username
+ * to complete profile setup
+ */
+
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
-import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,9 +69,9 @@ export default function SignupPage() {
         }}
       />
 
-      {/* Main Card - NOW STRAIGHT (No rotation) */}
+      {/* Main Card */}
       <div className="relative w-full max-w-md bg-[#FFFDF5] shadow-[2px_4px_20px_rgba(0,0,0,0.1)] border border-[#8C7B66]/30 p-8 md:p-12">
-        {/* Tape Effect - Kept slightly tilted for style, but you can remove rotate-2 if you want it straight too */}
+        {/* Tape Effect */}
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-8 bg-[#E6B89C]/80 shadow-sm rotate-0 mix-blend-multiply mask-tape" style={{ clipPath: "polygon(2% 0, 100% 0, 98% 100%, 0% 100%)" }} />
 
         {/* Header */}
@@ -92,7 +100,7 @@ export default function SignupPage() {
               fill="#34A853"
             />
             <path
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26..81-.58z"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26z"
               fill="#FBBC05"
             />
             <path

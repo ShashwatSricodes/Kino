@@ -1,102 +1,41 @@
+/**
+ * User Dashboard Page
+ * 
+ * Displays a user's collection archive.
+ * 
+ * Features:
+ * - Shows all collections as polaroid-style cards
+ * - "Collect" button to add new collections
+ * - Delete collections (owner only)
+ * - Login/Signup links for visitors
+ * - Logout for authenticated users
+ * 
+ * Public: Anyone can view any user's collections
+ * Private: Only owner can add/delete collections
+ */
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { Postmark, PaperTexture } from "./components";
+import { logout, deleteCollection } from "./actions";
 import { DeleteButton } from "./DeleteButton";
 
 export const dynamic = "force-dynamic";
 
-/* ------------------ Visual Components ------------------ */
-
-const Postmark = ({ date = "FEB 26", location = "KINO" }) => (
-  <div className="absolute -right-5 -top-5 z-20 h-24 w-24 opacity-60 pointer-events-none mix-blend-multiply rotate-[25deg] overflow-hidden">
-    <div className="absolute inset-0 rounded-full border-[2px] border-slate-800/60" />
-    <div className="absolute inset-1 rounded-full border border-slate-800/40" />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-      <div className="text-[6px] font-bold uppercase tracking-widest text-slate-800/70 font-serif">
-        {location} ARCHIVE
-      </div>
-      <div className="text-[10px] font-bold text-slate-900/80 leading-tight">
-        {date}
-      </div>
-    </div>
-    <div className="absolute top-1/2 -left-4 w-32 border-t border-slate-800/50 rotate-[-15deg]" />
-    <div className="absolute top-1/2 -left-4 w-32 border-t border-slate-800/50 rotate-[-15deg] mt-1.5" />
-  </div>
-);
-
-const PaperTexture = () => (
-  <div
-    className="absolute inset-0 opacity-30 pointer-events-none z-10 mix-blend-multiply"
-    style={{
-      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E")`,
-    }}
-  />
-);
-
-/* ------------------ Supabase Server Helper ------------------ */
-
-async function createSupabaseServer() {
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {
-          // Leave this empty! 
-          // Server Components cannot set cookies.
-          // Refreshing is handled by Middleware.
-        },
-      },
-    }
-  );
-}
-
-/* ------------------ Server Actions ------------------ */
-
-async function logout() {
-  "use server";
-  const supabase = await createSupabaseServer();
-  await supabase.auth.signOut();
-  redirect("/");  // Changed from "/u/kino" to "/"
-}
-
-async function deleteCollection(formData: FormData) {
-  "use server";
-  const collectionId = formData.get("collectionId") as string;
-  const username = formData.get("username") as string;
-  const supabase = await createSupabaseServer();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  await supabase
-    .from("collections")
-    .delete()
-    .eq("id", collectionId)
-    .eq("user_id", user.id);
-
-  redirect(`/u/${username}`);
-}
-
-/* ------------------ Page ------------------ */
-
-export default async function Page({
+export default async function UserDashboardPage({
   params,
 }: {
   params: { username: string };
 }) {
   const { username } = await params;
-  const supabase = await createSupabaseServer();
+  const supabase = await createClient();
+
+  // Get authenticated user (if any)
+  const { data: { user: authUser } } = await supabase.auth.getUser();
 
   let user = null;
   let activeUsername = username;
-
-  const { data: { user: authUser } } = await supabase.auth.getUser();
 
   if (authUser) {
     user = authUser;
@@ -106,11 +45,12 @@ export default async function Page({
       .eq("id", authUser.id)
       .single();
 
-    if (profile?.username) activeUsername = profile.username;
+    if (profile?.username) {
+      activeUsername = profile.username;
+    }
   }
 
-  /* -------- Collections -------- */
-
+  // Fetch collections for the profile being viewed
   let collections: {
     id: string;
     title: string;
@@ -139,19 +79,18 @@ export default async function Page({
     }
   }
 
+  // Helper for responsive sizing
   const getSizeClasses = (variant: string) => {
     if (variant === "wide") return "w-48 aspect-[4/3]";
     if (variant === "square") return "w-40 aspect-square";
     return "w-36 aspect-[3/4]";
   };
 
-  /* ------------------ UI ------------------ */
-
   return (
     <main className="min-h-screen px-6 py-20 bg-[#EFE5CF] relative overflow-hidden">
       <PaperTexture />
 
-      {/* AUTH */}
+      {/* AUTH HEADER */}
       <div className="fixed top-6 right-8 z-50 font-[Architects_Daughter] text-sm text-[#3A332A]">
         {!user ? (
           <div className="flex gap-3 items-center">
@@ -190,7 +129,7 @@ export default async function Page({
         </p>
       </div>
 
-      {/* GRID */}
+      {/* COLLECTIONS GRID */}
       <section className="relative mx-auto max-w-6xl flex flex-wrap justify-center items-end gap-x-12 gap-y-16 px-4 z-10">
         
         {/* COLLECT BUTTON */}
@@ -203,6 +142,7 @@ export default async function Page({
           </div>
         </Link>
 
+        {/* COLLECTION CARDS */}
         {collections.map((c, i) => (
           <div
             key={c.id}
@@ -231,14 +171,14 @@ export default async function Page({
               </div>
             </Link>
 
-            {/* Collection Title - always visible */}
+            {/* Collection Title */}
             <div className="mt-3 text-center">
               <p className="font-[Architects_Daughter] text-sm text-[#3A332A]">
                 {c.title}
               </p>
             </div>
 
-            {/* Delete Button - always visible on mobile, hover on desktop */}
+            {/* Delete Button (owner only) */}
             {user && (
               <div className="absolute -top-2 -right-2 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <DeleteButton

@@ -4,7 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
- 
   if (request.nextUrl.pathname.startsWith("/auth/callback")) {
     return response;
   }
@@ -17,7 +16,14 @@ export async function middleware(request: NextRequest) {
         getAll: (): ReturnType<typeof request.cookies.getAll> => request.cookies.getAll(),
         setAll: (cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) => {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
+            // ✅ Extend cookie expiration to 30 days
+            response.cookies.set(name, value, {
+              ...options,
+              maxAge: 60 * 60 * 24 * 30, // 30 days in seconds
+              path: '/',
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production'
+            });
           });
         },
       },

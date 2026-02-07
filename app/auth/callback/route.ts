@@ -1,56 +1,49 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+/**
+ * OAuth Callback Handler
+ * 
+ * Handles the redirect after OAuth login (Google, etc.)
+ * 
+ * Flow:
+ * 1. Receives authorization code from OAuth provider
+ * 2. Exchanges code for Supabase session
+ * 3. Checks if user has a username
+ * 4. Redirects to dashboard OR onboarding
+ */
+
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
 
+  // No code = invalid callback
   if (!code) {
     return NextResponse.redirect(origin);
   }
 
-  const cookieStore = await cookies();
+  const supabase = await createClient();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }>) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
-      },
-    }
-  );
+  // Exchange OAuth code for session
+  const { data: { user } } = await supabase.auth.exchangeCodeForSession(code);
 
-  // ✅ Exchange OAuth code for session
-  const {
-    data: { user },
-  } = await supabase.auth.exchangeCodeForSession(code);
-
-  // 🚨 Safety fallback
+  // Safety fallback - redirect to login if exchange failed
   if (!user) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  // 🔍 Check if username exists - USE maybeSingle() instead of single()
+  // Check if user has completed onboarding (has username)
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.id)
-    .maybeSingle(); // ← CHANGED: This won't throw an error if no row exists
+    .maybeSingle();
 
-  // ✅ Decide redirect
+  // Has username → go to dashboard
   if (profile?.username) {
     return NextResponse.redirect(`${origin}/u/${profile.username}`);
   }
 
-  // ❗ No username yet → onboarding
+  // No username → complete onboarding first
   return NextResponse.redirect(`${origin}/onboarding/username`);
 }

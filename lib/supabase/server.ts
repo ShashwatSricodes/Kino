@@ -1,7 +1,23 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+/**
+ * Supabase Server Client
+ * 
+ * Use this in Server Components, Server Actions, and Route Handlers.
+ * Handles cookie-based authentication for server-side operations.
+ * 
+ * Benefits:
+ * - Centralizes server client creation (no repetition)
+ * - Consistent cookie handling across all server code
+ * - Easy to update auth config in one place
+ * 
+ * Usage:
+ * const supabase = await createClient();
+ * const { data } = await supabase.from('profiles').select();
+ */
 
-export async function createSupabaseServerClient() {
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -12,7 +28,11 @@ export async function createSupabaseServerClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        // ❌ no setAll here
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
       },
     }
   );
