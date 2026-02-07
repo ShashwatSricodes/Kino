@@ -1,65 +1,96 @@
-import Image from "next/image";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
-export default function Home() {
+/* ------------------ Visual Components ------------------ */
+
+const PaperTexture = () => (
+  <div
+    className="absolute inset-0 opacity-30 pointer-events-none z-10 mix-blend-multiply"
+    style={{
+      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E")`,
+    }}
+  />
+);
+
+export default async function LandingPage() {
+  const cookieStore = await cookies();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {},
+      },
+    }
+  );
+
+  // Check if user is logged in
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // If logged in, redirect to their profile
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    
+    if (profile?.username) {
+      redirect(`/u/${profile.username}`);
+    }
+  }
+
+  /* ------------------ UI - Exact match to /u/[username] ------------------ */
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen px-6 py-20 bg-[#EFE5CF] relative overflow-hidden">
+      <PaperTexture />
+
+      {/* AUTH - Top Right */}
+      <div className="fixed top-6 right-8 z-50 font-[Architects_Daughter] text-sm text-[#3A332A]">
+        <div className="flex gap-3 items-center">
+          <Link href="/login" className="hover:text-[#8C7B66] transition-colors">
+            Login
+          </Link>
+          <span className="opacity-50">·</span>
+          <Link 
+            href="/signup" 
+            className="font-bold hover:text-[#E07A5F] transition-colors underline decoration-1 underline-offset-4 decoration-[#E07A5F]/40"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Sign up
+          </Link>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* HEADER */}
+      <div className="relative mx-auto max-w-2xl text-center mb-24 z-10">
+        <h1 className="font-serif text-6xl tracking-[0.15em] uppercase mb-4 text-[#2c241b]">
+          Kino
+        </h1>
+        <p className="font-[Architects_Daughter] italic text-[#5C5043]">
+          a quiet archive of films that stayed
+        </p>
+      </div>
+
+      {/* GRID - Only "Collect" button for visitors */}
+      <section className="relative mx-auto max-w-6xl flex flex-wrap justify-center items-end gap-x-12 gap-y-16 px-4 z-10">
+        
+        {/* COLLECT BUTTON */}
+        <Link href="/signup">
+          <div className="w-36 aspect-[3/4] border-2 border-dashed border-[#A89F91] flex flex-col items-center justify-center rotate-[-2deg] hover:rotate-0 transition-transform bg-[#A89F91]/5 hover:bg-[#A89F91]/10 cursor-pointer group">
+            <Plus className="w-8 h-8 text-[#A89F91] group-hover:scale-110 transition-transform" />
+            <span className="font-[Architects_Daughter] text-xs mt-2 text-[#A89F91]">
+              Collect
+            </span>
+          </div>
+        </Link>
+
+      </section>
+    </main>
   );
 }

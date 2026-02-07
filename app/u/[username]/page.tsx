@@ -62,7 +62,7 @@ async function logout() {
   "use server";
   const supabase = await createSupabaseServer();
   await supabase.auth.signOut();
-  redirect("/u/kino");
+  redirect("/");  // Changed from "/u/kino" to "/"
 }
 
 async function deleteCollection(formData: FormData) {

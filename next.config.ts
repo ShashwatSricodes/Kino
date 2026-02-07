@@ -1,15 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/u/kino",
-        permanent: true, // 301 redirect
-      },
-    ];
-  },
+  // Removed redirects - now "/" will work as landing page
 };
 
 export default nextConfig;
