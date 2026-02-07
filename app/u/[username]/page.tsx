@@ -1,15 +1,15 @@
 /**
  * User Dashboard Page
- * 
+ *
  * Displays a user's collection archive.
- * 
+ *
  * Features:
  * - Shows all collections as polaroid-style cards
  * - "Collect" button to add new collections
  * - Delete collections (owner only)
  * - Login/Signup links for visitors
  * - Logout for authenticated users
- * 
+ *
  * Public: Anyone can view any user's collections
  * Private: Only owner can add/delete collections
  */
@@ -28,56 +28,61 @@ export default async function UserDashboardPage({
 }: {
   params: { username: string };
 }) {
-  const { username } = await params;
+  const { username } = params;
   const supabase = await createClient();
 
   // Get authenticated user (if any)
-  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
 
-  let user = null;
-  let activeUsername = username;
+  /**
+   * 1️⃣ Get the profile being viewed via username
+   */
+  const { data: viewedProfile } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .eq("username", username)
+    .single();
 
-  if (authUser) {
-    user = authUser;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", authUser.id)
-      .single();
-
-    if (profile?.username) {
-      activeUsername = profile.username;
-    }
+  if (!viewedProfile) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-[#EFE5CF]">
+        <p className="font-[Architects_Daughter] text-[#3A332A]">
+          User not found
+        </p>
+      </main>
+    );
   }
 
-  // Fetch collections for the profile being viewed
-  let collections: {
-    id: string;
-    title: string;
-    slug: string;
-    img: string;
-    price: string;
-    variant: string;
-  }[] = [];
+  /**
+   * 2️⃣ Determine if logged-in user is the owner
+   */
+  const isOwner = authUser?.id === viewedProfile.id;
 
-  if (user) {
-    const { data } = await supabase
-      .from("collections")
-      .select("id,title,slug,poster_url,price,variant")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+  /**
+   * 3️⃣ Fetch PUBLIC collections of the viewed profile
+   */
+  const { data } = await supabase
+    .from("collections")
+    .select("id,title,slug,poster_url,price,variant")
+    .eq("user_id", viewedProfile.id)
+    .order("created_at", { ascending: false });
 
-    if (data?.length) {
-      collections = data.map((c) => ({
-        id: c.id,
-        title: c.title,
-        slug: c.slug,
-        img: c.poster_url,
-        price: c.price ?? "—",
-        variant: c.variant ?? "tall",
-      }));
-    }
-  }
+  const collections =
+    data?.map((c) => ({
+      id: c.id,
+      title: c.title,
+      slug: c.slug,
+      img: c.poster_url,
+      price: c.price ?? "—",
+      variant: c.variant ?? "tall",
+    })) ?? [];
+
+  /**
+   * Username used in UI/header/links
+   */
+  const activeUsername = viewedProfile.username;
 
   // Helper for responsive sizing
   const getSizeClasses = (variant: string) => {
@@ -92,14 +97,17 @@ export default async function UserDashboardPage({
 
       {/* AUTH HEADER */}
       <div className="fixed top-6 right-8 z-50 font-[Architects_Daughter] text-sm text-[#3A332A]">
-        {!user ? (
+        {!authUser ? (
           <div className="flex gap-3 items-center">
-            <Link href="/login" className="hover:text-[#8C7B66] transition-colors">
+            <Link
+              href="/login"
+              className="hover:text-[#8C7B66] transition-colors"
+            >
               Login
             </Link>
             <span className="opacity-50">·</span>
-            <Link 
-              href="/signup" 
+            <Link
+              href="/signup"
               className="font-bold hover:text-[#E07A5F] transition-colors underline decoration-1 underline-offset-4 decoration-[#E07A5F]/40"
             >
               Sign up
@@ -131,9 +139,8 @@ export default async function UserDashboardPage({
 
       {/* COLLECTIONS GRID */}
       <section className="relative mx-auto max-w-6xl flex flex-wrap justify-center items-end gap-x-12 gap-y-16 px-4 z-10">
-        
-        {/* COLLECT BUTTON */}
-        <Link href={user ? `/u/${activeUsername}/new` : "/signup"}>
+        {/* COLLECT BUTTON (only owner can actually use it, but UI unchanged) */}
+        <Link href={authUser ? `/u/${activeUsername}/new` : "/signup"}>
           <div className="w-36 aspect-[3/4] border-2 border-dashed border-[#A89F91] flex flex-col items-center justify-center rotate-[-2deg] hover:rotate-0 transition-transform bg-[#A89F91]/5 hover:bg-[#A89F91]/10 cursor-pointer group">
             <Plus className="w-8 h-8 text-[#A89F91] group-hover:scale-110 transition-transform" />
             <span className="font-[Architects_Daughter] text-xs mt-2 text-[#A89F91]">
@@ -178,8 +185,8 @@ export default async function UserDashboardPage({
               </p>
             </div>
 
-            {/* Delete Button (owner only) */}
-            {user && (
+            {/* Delete Button (OWNER ONLY) */}
+            {isOwner && (
               <div className="absolute -top-2 -right-2 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <DeleteButton
                   collectionId={c.id}
